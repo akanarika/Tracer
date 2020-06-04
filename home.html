@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Tracer</title>
+		<link rel="stylesheet" href="style.css" type="text/css">
+
+	</head>
+	<body>
+        <div style="text-align:center">
+            <canvas id="c" width="400" height="300" style="border:1px solid #FFF;"></canvas>
+        </div>
+        <script id="vs" type="notjs">
+        	attribute vec2 a_pixel;                                                                                                         
+			uniform mat3 u_matrix;                                                                                                          
+			varying vec3 pixel;                                                                                                             
+			void main() {
+				pixel = vec3(a_pixel, 0);
+			    gl_Position = vec4((u_matrix * vec3(a_pixel, 1.0)).xyz, 1.0);
+			    gl_PointSize = 1.0;
+			}    
+        </script>
+		<script id="fs" type="notjs"> 
+			precision mediump float;
+            uniform vec3 cam;
+            uniform vec3 spheres[10];
+            varying vec3 pixel;
+
+            bool intersectSphere(vec3 ray_o, vec3 ray_d, vec3 sphere_o, float sphere_r, out float t) {
+                float a = dot(ray_d, ray_d);
+                float b = 2.0 * dot(ray_d, ray_o - sphere_o);
+                float c = dot(ray_o - sphere_o, ray_o - sphere_o) - sphere_r * sphere_r;
+                float delta	= b * b - 4.0 * a * c;
+                if (delta < 0.0) return false;
+                t = (- b - sqrt(delta)) / (2.0 * a);
+                return true;
+            }
+
+            bool intersect(vec3 ray_o, vec3 ray_d, out vec3 n) {
+                for (int i = 0; i < 10; i++) {
+                	float t;
+                    if (intersectSphere(ray_o, ray_d, spheres[i], 50.0, t)) {
+                    	n = normalize(ray_o + t * ray_d - spheres[i]);
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+			void main() {
+                vec3 ray_o = cam;
+                vec3 ray_d = pixel - ray_o;
+                ray_d = normalize(ray_d);
+				vec3 n;
+				if (!intersect(ray_o, ray_d, n)) return;
+                gl_FragColor = vec4(0.5 * vec3(n.x + 1.0, n.y + 1.0, n.z + 1.0), 1.0);
+			}
+
+		</script>
+		<script src="main.js"></script>
+	</body>
+</html>

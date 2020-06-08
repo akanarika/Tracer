@@ -1,5 +1,6 @@
-var w = 400;
-var h = 300;
+var w = 800;
+var h = 600;
+var time = 0.0;
 function createShader(gl, type, source) {
 	var shader = gl.createShader(type);
 	gl.shaderSource(shader, source);
@@ -113,6 +114,7 @@ function main() {
         },
     };
 
+    var start = new Date();
 	var canvas = document.querySelector("#c");	
 	var gl = canvas.getContext("webgl");
 	if (!gl) {
@@ -139,17 +141,34 @@ function main() {
 
 	gl.useProgram(prog);
 
-    // cameta loc
-    var cl = gl.getUniformLocation(prog, "cam");
-    gl.uniform3f(cl, 0, 0, -1000.0);
+    // w, h
+    var wl = gl.getUniformLocation(prog, "w");
+    gl.uniform1f(wl, w);
+    var hl = gl.getUniformLocation(prog, "h");
+    gl.uniform1f(hl, h);
+
+    // u_seed
+    var usl = gl.getUniformLocation(prog, "u_seed");
+    gl.uniform1f(usl, 0.0);
+
+    // cameta location
+    var cl = gl.getUniformLocation(prog, "cam.o");
+    gl.uniform3f(cl, 0, 0, 1000.0);
 
     // spheres
+    /**
     for (var i = 0; i < 10; i++) {
         var x = Math.random() * w - w / 2;
         var y = Math.random() * h - h / 2;
-        var z = Math.random() * 100 - 50;;
-        gl.uniform3f(gl.getUniformLocation(prog, "spheres[" + i + "]"), x, y, z);
+        var z = - Math.random() * h / 5.0 - h / 10.0;;
+        gl.uniform3f(gl.getUniformLocation(prog, "spheres[" + i + "].o"), x, y, z);
+        gl.uniform1f(gl.getUniformLocation(prog, "spheres[" + i + "].r"), Math.random() * h / 5.0 + 20.0);
     }
+    **/
+    gl.uniform3f(gl.getUniformLocation(prog, "spheres[" + 0 + "].o"), 0, 0, -100.0);
+    gl.uniform1f(gl.getUniformLocation(prog, "spheres[" + 0 + "].r"), 150.0);
+    gl.uniform3f(gl.getUniformLocation(prog, "spheres[" + 1 + "].o"), 0, -1000.0, -200.0);
+    gl.uniform1f(gl.getUniformLocation(prog, "spheres[" + 1 + "].r"), 1000.0);
 
     // var tra = m3.translate(100, 150);
     // var rot = m3.rotate(0);

@@ -7,52 +7,128 @@
 	</head>
 	<body>
         <div style="text-align:center">
-            <canvas id="c" width="400" height="300" style="border:1px solid #FFF;"></canvas>
+            <canvas id="c" width="800" height="600" style="border:1px solid #FFF;"></canvas>
         </div>
         <script id="vs" type="notjs">
         	attribute vec2 a_pixel;                                                                                                         
 			uniform mat3 u_matrix;                                                                                                          
 			varying vec3 pixel;                                                                                                             
 			void main() {
-				pixel = vec3(a_pixel, 0);
+				pixel = vec3(a_pixel, 0) + vec3(0.5, 0.5, 0);
 			    gl_Position = vec4((u_matrix * vec3(a_pixel, 1.0)).xyz, 1.0);
 			    gl_PointSize = 1.0;
-			}    
+			}
         </script>
-		<script id="fs" type="notjs"> 
-			precision mediump float;
-            uniform vec3 cam;
-            uniform vec3 spheres[10];
-            varying vec3 pixel;
+		<script id="fs" type="notjs">
+            precision mediump float;
 
-            bool intersectSphere(vec3 ray_o, vec3 ray_d, vec3 sphere_o, float sphere_r, out float t) {
-                float a = dot(ray_d, ray_d);
-                float b = 2.0 * dot(ray_d, ray_o - sphere_o);
-                float c = dot(ray_o - sphere_o, ray_o - sphere_o) - sphere_r * sphere_r;
-                float delta	= b * b - 4.0 * a * c;
-                if (delta < 0.0) return false;
-                t = (- b - sqrt(delta)) / (2.0 * a);
+            struct Sphere {
+                vec3 o;
+                float r;
+            };
+
+            struct Cam {
+                vec3 o;
+                float focal;
+            };
+
+            struct Ray {
+                vec3 o;
+                vec3 d;
+            };
+
+            struct Hit {
+                vec3 p;
+                vec3 n;
+            };
+            
+            uniform float w;
+            uniform float h;
+            uniform float u_seed;
+            uniform Cam cam;
+            uniform Sphere spheres[2];
+            varying vec3 pixel;
+            vec4 bg_color = vec4(0.8, 0.3, 0.6, 1.0);
+            float n_seed = u_seed;
+            
+            // 0 ~ 1.0
+            float random(inout float seed) {
+                vec3 scale = vec3(12.9898, 78.233, 151.7182);
+                seed += 0.01;
+                if (seed > 10000000.0) seed = 0.0;
+                return fract(sin(dot(gl_FragCoord.xyz + seed, scale)) * 43758.5453 + seed);
+            }
+
+            bool intersectSphere(Ray ray, Sphere sphere, out float t) {
+                float a = dot(ray.d, ray.d);
+                float half_b = dot(ray.d, ray.o - sphere.o);
+                float c = dot(ray.o - sphere.o, ray.o - sphere.o) - sphere.r * sphere.r;
+                float qua_delta	= half_b * half_b - a * c;
+                if (qua_delta < 0.0) return false;
+                t = (- half_b - sqrt(qua_delta)) / a; // smaller root
                 return true;
             }
 
-            bool intersect(vec3 ray_o, vec3 ray_d, out vec3 n) {
+            bool intersect(Ray ray, out Hit hit) {
                 for (int i = 0; i < 10; i++) {
                 	float t;
-                    if (intersectSphere(ray_o, ray_d, spheres[i], 50.0, t)) {
-                    	n = normalize(ray_o + t * ray_d - spheres[i]);
+                    if (intersectSphere(ray, spheres[i], t)) {
+                        hit.p = ray.o + ray.d * t;
+                    	hit.n = normalize(hit.p - spheres[i].o);
                         return true;
                     }
                 }
                 return false;
             }
 
+            vec3 randPointInSphere() {
+                vec3 off = vec3(0.0, 0.0, 0.0);
+                for (int i = 0; i < 100000; i++) {
+                    off = vec3(random(n_seed) * 2.0 - 1.0, random(n_seed) * 2.0 - 1.0, random(n_seed) * 2.0 - 1.0);
+                    if (dot(off, off) > 1.0) continue;
+                    return off;
+                }
+                return off;
+            }
+
+            bool shoot_ray(Ray ray, inout vec4 color, out Hit hit) {
+                if (!intersect(ray, hit)) return false;                
+                color = vec4(0.5 * vec3(hit.n.x + 1.0, hit.n.y + 1.0, hit.n.z + 1.0), 1.0);
+                return true;
+            }
+
+            bool shoot_rays(Ray ray, inout vec4 color) {
+                bool did_hit = false;
+                const int sample_count = 100;
+                for (int i = 0; i < 100; i++) {
+                    Ray nr;
+                    nr.o = ray.o;
+                    nr.d = ray.d + vec3(random(n_seed) - 0.5, random(n_seed) - 0.5, 0);
+                    Hit hit;
+                    vec4 single_color = vec4(1.0);
+                    if (shoot_ray(nr, single_color, hit)) {
+                        did_hit = true;
+                        color = color + single_color;
+                    } else {
+                        color = color + bg_color;
+                    }
+                }
+
+                return did_hit;
+            }
+
 			void main() {
-                vec3 ray_o = cam;
-                vec3 ray_d = pixel - ray_o;
-                ray_d = normalize(ray_d);
-				vec3 n;
-				if (!intersect(ray_o, ray_d, n)) return;
-                gl_FragColor = vec4(0.5 * vec3(n.x + 1.0, n.y + 1.0, n.z + 1.0), 1.0);
+                Ray ray;
+                ray.o = cam.o;
+                ray.d = pixel - ray.o;
+                vec4 color = vec4(0);
+                float t = 0.5 * (normalize(ray.d).y + 1.0);
+                bg_color = (1.0 - t) * vec4(1.0) + t * bg_color;
+                if (shoot_rays(ray, color)) {
+                    gl_FragColor = color / 100.0;
+                    return;
+                }
+                gl_FragColor = bg_color;
 			}
 
 		</script>

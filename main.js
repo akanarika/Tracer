@@ -149,7 +149,7 @@ function main() {
 
     // u_seed
     var usl = gl.getUniformLocation(prog, "u_seed");
-    gl.uniform1f(usl, 0.0);
+    gl.uniform1f(usl, 1.0);
 
     // cameta location
     var cl = gl.getUniformLocation(prog, "cam.o");
@@ -167,8 +167,8 @@ function main() {
     **/
     gl.uniform3f(gl.getUniformLocation(prog, "spheres[" + 0 + "].o"), 0, 0, -100.0);
     gl.uniform1f(gl.getUniformLocation(prog, "spheres[" + 0 + "].r"), 150.0);
-    gl.uniform3f(gl.getUniformLocation(prog, "spheres[" + 1 + "].o"), 0, -1000.0, -200.0);
-    gl.uniform1f(gl.getUniformLocation(prog, "spheres[" + 1 + "].r"), 1000.0);
+    gl.uniform3f(gl.getUniformLocation(prog, "spheres[" + 1 + "].o"), 0, -2000.0, -600.0);
+    gl.uniform1f(gl.getUniformLocation(prog, "spheres[" + 1 + "].r"), 2000.0);
 
     // var tra = m3.translate(100, 150);
     // var rot = m3.rotate(0);

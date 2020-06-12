@@ -38,6 +38,7 @@
             };
 
             struct Hit {
+                float t;
                 vec3 p;
                 vec3 n;
             };
@@ -49,36 +50,52 @@
             uniform Sphere spheres[2];
             varying vec3 pixel;
             vec4 bg_color = vec4(0.8, 0.3, 0.6, 1.0);
+            const int sample_count = 100;
+            const float pi = 3.141592653589;
             float n_seed = u_seed;
-            
+
             // 0 ~ 1.0
             float random(inout float seed) {
                 vec3 scale = vec3(12.9898, 78.233, 151.7182);
-                seed += 0.01;
+                seed += 1.1;
                 if (seed > 10000000.0) seed = 0.0;
                 return fract(sin(dot(gl_FragCoord.xyz + seed, scale)) * 43758.5453 + seed);
             }
 
-            bool intersectSphere(Ray ray, Sphere sphere, out float t) {
+            vec3 random_unit_vector() {
+                float a = random(n_seed) * 2.0 * pi;
+                float z = random(n_seed) * 2.0 - 1.0;
+                float r = sqrt(1.0 - z * z);
+                return vec3(r * cos(a), r * sin(a), z);
+            }
+
+            bool intersectSphere(in Ray ray, Sphere sphere, float t_min, out float t) {
                 float a = dot(ray.d, ray.d);
                 float half_b = dot(ray.d, ray.o - sphere.o);
                 float c = dot(ray.o - sphere.o, ray.o - sphere.o) - sphere.r * sphere.r;
                 float qua_delta	= half_b * half_b - a * c;
                 if (qua_delta < 0.0) return false;
                 t = (- half_b - sqrt(qua_delta)) / a; // smaller root
-                return true;
+                if (t > t_min) return true;
+                t = (- half_b + sqrt(qua_delta)) / a; // larger root
+                if (t > t_min) return true;
+                return false;
             }
 
-            bool intersect(Ray ray, out Hit hit) {
-                for (int i = 0; i < 10; i++) {
+            bool intersect(in Ray ray, out Hit hit) {
+                bool did_hit = false;
+                for (int i = 0; i < 2; i++) {
                 	float t;
-                    if (intersectSphere(ray, spheres[i], t)) {
-                        hit.p = ray.o + ray.d * t;
-                    	hit.n = normalize(hit.p - spheres[i].o);
-                        return true;
+                    if (intersectSphere(ray, spheres[i], 0.0, t)) {
+                        if (!did_hit || t < hit.t) {
+                            did_hit = true;
+                            hit.t = t;
+                            hit.p = ray.o + ray.d * t;
+                    	    hit.n = normalize(hit.p - spheres[i].o);
+                        }   
                     }
                 }
-                return false;
+                return did_hit;
             }
 
             vec3 randPointInSphere() {
@@ -91,30 +108,42 @@
                 return off;
             }
 
-            bool shoot_ray(Ray ray, inout vec4 color, out Hit hit) {
+            bool shoot_ray(in Ray ray, inout vec4 color, out Hit hit) {
                 if (!intersect(ray, hit)) return false;                
                 color = vec4(0.5 * vec3(hit.n.x + 1.0, hit.n.y + 1.0, hit.n.z + 1.0), 1.0);
                 return true;
             }
 
-            bool shoot_rays(Ray ray, inout vec4 color) {
+            bool shoot_rays(in Ray ray, inout vec4 color) {
+                bool last_hit = false;
                 bool did_hit = false;
-                const int sample_count = 100;
-                for (int i = 0; i < 100; i++) {
+                for (int i = 0; i < sample_count; i++) {
                     Ray nr;
                     nr.o = ray.o;
                     nr.d = ray.d + vec3(random(n_seed) - 0.5, random(n_seed) - 0.5, 0);
                     Hit hit;
-                    vec4 single_color = vec4(1.0);
-                    if (shoot_ray(nr, single_color, hit)) {
-                        did_hit = true;
-                        color = color + single_color;
-                    } else {
-                        color = color + bg_color;
+                    vec4 single_color;
+                    float fac = 1.0;
+                    for (int d = 0; d < 30; d++) {
+                        if (shoot_ray(nr, single_color, hit)) {
+                            did_hit = true;
+                            fac = 0.5 * fac;
+                            vec3 target = hit.p + hit.n + random_unit_vector();
+                            nr.o = hit.p;
+                            nr.d = target - hit.p;
+                        } else {
+                            color = color + fac * bg_color;
+                            break;
+                        }
                     }
                 }
-
                 return did_hit;
+            }
+
+            vec4 out_color(in vec4 color, in int sample_count) {
+                float sample_count_f = float(sample_count);
+                float scale = 1.0 / sample_count_f;
+                return vec4(sqrt(color.x * scale), sqrt(color.y * scale), sqrt(color.z * scale), 1.0);
             }
 
 			void main() {
@@ -124,11 +153,8 @@
                 vec4 color = vec4(0);
                 float t = 0.5 * (normalize(ray.d).y + 1.0);
                 bg_color = (1.0 - t) * vec4(1.0) + t * bg_color;
-                if (shoot_rays(ray, color)) {
-                    gl_FragColor = color / 100.0;
-                    return;
-                }
-                gl_FragColor = bg_color;
+                shoot_rays(ray, color);
+                gl_FragColor = out_color(color, sample_count);
 			}
 
 		</script>

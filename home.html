@@ -22,9 +22,15 @@
 		<script id="fs" type="notjs">
             precision mediump float;
 
+            struct Mat {
+                int i; // diffuse - 1, metal - 2
+                vec3 att; // attenuation
+            };
+
             struct Sphere {
                 vec3 o;
                 float r;
+                Mat mat;
             };
 
             struct Cam {
@@ -41,15 +47,16 @@
                 float t;
                 vec3 p;
                 vec3 n;
+                Mat mat;
             };
             
             uniform float w;
             uniform float h;
             uniform float u_seed;
             uniform Cam cam;
-            uniform Sphere spheres[2];
+            uniform Sphere spheres[4];
             varying vec3 pixel;
-            vec4 bg_color = vec4(0.8, 0.3, 0.6, 1.0);
+            vec4 bg_color = vec4(0.4, 0.4, 0.0, 1.0);
             const int sample_count = 100;
             const float pi = 3.141592653589;
             float n_seed = u_seed;
@@ -84,7 +91,7 @@
 
             bool intersect(in Ray ray, out Hit hit) {
                 bool did_hit = false;
-                for (int i = 0; i < 2; i++) {
+                for (int i = 0; i < 4; i++) {
                 	float t;
                     if (intersectSphere(ray, spheres[i], 0.0, t)) {
                         if (!did_hit || t < hit.t) {
@@ -92,6 +99,7 @@
                             hit.t = t;
                             hit.p = ray.o + ray.d * t;
                     	    hit.n = normalize(hit.p - spheres[i].o);
+                            hit.mat = spheres[i].mat;
                         }   
                     }
                 }
@@ -115,8 +123,7 @@
             }
 
             bool shoot_rays(in Ray ray, inout vec4 color) {
-                bool last_hit = false;
-                bool did_hit = false;
+            bool did_hit = false;
                 for (int i = 0; i < sample_count; i++) {
                     Ray nr;
                     nr.o = ray.o;
@@ -124,15 +131,30 @@
                     Hit hit;
                     vec4 single_color;
                     float fac = 1.0;
-                    for (int d = 0; d < 30; d++) {
+                    vec3 fac3 = vec3(1.0);
+                    for (int d = 0; d < 50; d++) {
                         if (shoot_ray(nr, single_color, hit)) {
                             did_hit = true;
-                            fac = 0.5 * fac;
-                            vec3 target = hit.p + hit.n + random_unit_vector();
-                            nr.o = hit.p;
-                            nr.d = target - hit.p;
+                            if (hit.mat.i == 1) {
+                                fac = 0.5 * fac;
+                                vec3 target = hit.p + hit.n + random_unit_vector();
+                                nr.o = hit.p;
+                                nr.d = target - hit.p;
+                            } else {
+                                fac3 = vec3(hit.mat.att.x * fac3.x, hit.mat.att.y * fac3.y, hit.mat.att.z * fac3.z);
+                                vec3 reflect = nr.d - 2.0 * dot(nr.d, hit.n) * hit.n;
+                                nr.o = hit.p;
+                                nr.d = reflect;
+                                if (dot(reflect, hit.n) < 0.0) continue;
+                            }
                         } else {
-                            color = color + fac * bg_color;
+                            if (!did_hit) {
+                                color = color + fac * bg_color;
+                            } else if (hit.mat.i == 1) {
+                                color = color + fac * vec4(hit.mat.att, 1.0);
+                            } else {
+                                color = color + vec4(fac3.x * bg_color.x, fac3.y * bg_color.y, fac3.z * bg_color.z, 1.0);
+                            }
                             break;
                         }
                     }

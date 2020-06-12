@@ -153,7 +153,7 @@ function main() {
 
     // cameta location
     var cl = gl.getUniformLocation(prog, "cam.o");
-    gl.uniform3f(cl, 0, 0, 1000.0);
+    gl.uniform3f(cl, 0, 400.0, 1000.0);
 
     // spheres
     /**
@@ -165,10 +165,22 @@ function main() {
         gl.uniform1f(gl.getUniformLocation(prog, "spheres[" + i + "].r"), Math.random() * h / 5.0 + 20.0);
     }
     **/
-    gl.uniform3f(gl.getUniformLocation(prog, "spheres[" + 0 + "].o"), 0, 0, -100.0);
-    gl.uniform1f(gl.getUniformLocation(prog, "spheres[" + 0 + "].r"), 150.0);
-    gl.uniform3f(gl.getUniformLocation(prog, "spheres[" + 1 + "].o"), 0, -2000.0, -600.0);
-    gl.uniform1f(gl.getUniformLocation(prog, "spheres[" + 1 + "].r"), 2000.0);
+    gl.uniform3f(gl.getUniformLocation(prog, "spheres[" + 0 + "].o"), 0, -2200.0, -1.0);
+    gl.uniform1f(gl.getUniformLocation(prog, "spheres[" + 0 + "].r"), 2200.0);
+    gl.uniform1i(gl.getUniformLocation(prog, "spheres[" + 0 + "].mat.i"), 1);
+    gl.uniform3f(gl.getUniformLocation(prog, "spheres[" + 0 + "].mat.att"), 0.0, 0.0, 0.0);
+    gl.uniform3f(gl.getUniformLocation(prog, "spheres[" + 1 + "].o"), -180.0, 80.0, -1.0);
+    gl.uniform1f(gl.getUniformLocation(prog, "spheres[" + 1 + "].r"), 80.0);
+    gl.uniform1i(gl.getUniformLocation(prog, "spheres[" + 1 + "].mat.i"), 2);
+    gl.uniform3f(gl.getUniformLocation(prog, "spheres[" + 1 + "].mat.att"), 1.0, 0.2, 0.0);
+    gl.uniform3f(gl.getUniformLocation(prog, "spheres[" + 2 + "].o"), 0, 100.0, -1.0);
+    gl.uniform1f(gl.getUniformLocation(prog, "spheres[" + 2 + "].r"), 100.0);
+    gl.uniform1i(gl.getUniformLocation(prog, "spheres[" + 2 + "].mat.i"), 1);
+    gl.uniform3f(gl.getUniformLocation(prog, "spheres[" + 2 + "].mat.att"), 0.0, 0.2, 0.7, 1.0);
+    gl.uniform3f(gl.getUniformLocation(prog, "spheres[" + 3 + "].o"), 180.0, 80.0, -1.0);
+    gl.uniform1f(gl.getUniformLocation(prog, "spheres[" + 3 + "].r"), 80.0);
+    gl.uniform1i(gl.getUniformLocation(prog, "spheres[" + 3 + "].mat.i"), 2);
+    gl.uniform3f(gl.getUniformLocation(prog, "spheres[" + 3 + "].mat.att"), 0.2, 0.8, 0.2);
 
     // var tra = m3.translate(100, 150);
     // var rot = m3.rotate(0);

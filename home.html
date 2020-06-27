@@ -7,17 +7,18 @@
 	</head>
 	<body>
         <div style="text-align:center">
-            <canvas id="c" width="800" height="600" style="border:1px solid #FFF;"></canvas>
+            <canvas id="c" width="400" height="300" style="border:1px solid #FFF;"></canvas>
         </div>
         <script id="vs" type="notjs">
-        	attribute vec2 a_pixel;                                                                                                         
-			uniform mat3 u_matrix;                                                                                                          
-			varying vec3 pixel;                                                                                                             
-			void main() {
-				pixel = vec3(a_pixel, 0) + vec3(0.5, 0.5, 0);
-			    gl_Position = vec4((u_matrix * vec3(a_pixel, 1.0)).xyz, 1.0);
-			    gl_PointSize = 1.0;
-			}
+            attribute vec2 a_pixel;    
+            uniform mat4 u_matrix;
+            varying vec3 pixel;
+
+            void main() {
+                pixel = vec3(a_pixel + vec2(0.5, 0.5), -500.0);
+                gl_Position = u_matrix * vec4(a_pixel, 0.0, 1.0);
+                gl_PointSize = 1.0;
+            }
         </script>
 		<script id="fs" type="notjs">
             precision mediump float;
@@ -35,6 +36,8 @@
 
             struct Cam {
                 vec3 o;
+                vec3 up;
+                vec3 gaze;
                 float focal;
             };
 
@@ -53,14 +56,15 @@
             uniform float w;
             uniform float h;
             uniform float u_seed;
-            uniform Cam cam;
-            uniform Sphere spheres[4];
+
+            uniform Sphere spheres[10];
             varying vec3 pixel;
             vec4 bg_color = vec4(0.4, 0.4, 0.0, 1.0);
             const int sample_count = 100;
             const float pi = 3.141592653589;
             float n_seed = u_seed;
 
+            // Unitilities 
             // 0 ~ 1.0
             float random(inout float seed) {
                 vec3 scale = vec3(12.9898, 78.233, 151.7182);
@@ -75,6 +79,25 @@
                 float r = sqrt(1.0 - z * z);
                 return vec3(r * cos(a), r * sin(a), z);
             }
+
+            mat2 transpose(mat2 m) {
+              return mat2(m[0][0], m[1][0],
+                          m[0][1], m[1][1]);
+            }
+
+            mat3 transpose(mat3 m) {
+              return mat3(m[0][0], m[1][0], m[2][0],
+                          m[0][1], m[1][1], m[2][1],
+                          m[0][2], m[1][2], m[2][2]);
+            }
+
+            mat4 transpose(mat4 m) {
+              return mat4(m[0][0], m[1][0], m[2][0], m[3][0],
+                          m[0][1], m[1][1], m[2][1], m[3][1],
+                          m[0][2], m[1][2], m[2][2], m[3][2],
+                          m[0][3], m[1][3], m[2][3], m[3][3]);
+            }
+
 
             bool intersectSphere(in Ray ray, Sphere sphere, float t_min, out float t) {
                 float a = dot(ray.d, ray.d);
@@ -91,7 +114,7 @@
 
             bool intersect(in Ray ray, out Hit hit) {
                 bool did_hit = false;
-                for (int i = 0; i < 4; i++) {
+                for (int i = 0; i < 10; i++) {
                 	float t;
                     if (intersectSphere(ray, spheres[i], 0.0, t)) {
                         if (!did_hit || t < hit.t) {
@@ -123,7 +146,7 @@
             }
 
             bool shoot_rays(in Ray ray, inout vec4 color) {
-            bool did_hit = false;
+                bool did_hit = false;
                 for (int i = 0; i < sample_count; i++) {
                     Ray nr;
                     nr.o = ray.o;
@@ -168,18 +191,21 @@
                 return vec4(sqrt(color.x * scale), sqrt(color.y * scale), sqrt(color.z * scale), 1.0);
             }
 
-			void main() {
+            void main() {
                 Ray ray;
-                ray.o = cam.o;
+                ray.o = vec3(0);
                 ray.d = pixel - ray.o;
                 vec4 color = vec4(0);
                 float t = 0.5 * (normalize(ray.d).y + 1.0);
                 bg_color = (1.0 - t) * vec4(1.0) + t * bg_color;
                 shoot_rays(ray, color);
+                //gl_FragColor = vec4(normalize(ray.d), 1.0);//out_color(color, sample_count);
                 gl_FragColor = out_color(color, sample_count);
-			}
+            }
 
 		</script>
+        <script src="vector.js"></script>
+        <script src="matrix.js"></script>
 		<script src="main.js"></script>
 	</body>
 </html>

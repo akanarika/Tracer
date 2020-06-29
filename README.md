@@ -1,5 +1,8 @@
 # Tracer
-a WebGL path tracer
+
+###a WebGL path tracer
+
+---
 
 some bugs or not:
 
@@ -23,5 +26,4 @@ some bugs or not:
 <img src="./bugs/18.png" width="250" height="200">
 <img src="./bugs/19.png" width="250" height="200">
 <img src="./bugs/20.png" width="250" height="200">
-<img src="./bugs/21.png" width="250" height="200">
 

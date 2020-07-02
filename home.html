@@ -56,13 +56,18 @@
             uniform float w;
             uniform float h;
             uniform float u_seed;
-            uniform Sphere spheres[10];
+            uniform Sphere u_spheres[10];
+            uniform vec3 u_cursor;
+            uniform int u_sample_count;
 
             varying vec3 pixel;
             vec4 bg_color = vec4(0.4, 0.4, 0.0, 1.0);
-            const int sample_count = 100;
+            //const int sample_count = 10;
             const float pi = 3.141592653589;
             float n_seed = u_seed;
+
+            Sphere spheres[10];
+            Cam cam = Cam(vec3(0., 0., 5000.), vec3(0, 0, -1.0), vec3(0, 1.0, 0), 10.);
 
             // Unitilities 
             // 0 ~ 1.0
@@ -147,7 +152,8 @@
 
             bool shoot_rays(in Ray ray, inout vec4 color) {
                 bool did_hit = false;
-                for (int i = 0; i < sample_count; i++) {
+                for (int i = 0; i < 100; i++) {
+                    if (i > u_sample_count) break;
                     Ray nr;
                     nr.o = ray.o;
                     nr.d = ray.d + vec3(random(n_seed) - 0.5, random(n_seed) - 0.5, 0);
@@ -155,7 +161,7 @@
                     vec4 single_color;
                     float fac = 1.0;
                     vec3 fac3 = vec3(1.0);
-                    for (int d = 0; d < 50; d++) {
+                    for (int d = 0; d < 5; d++) {
                         if (shoot_ray(nr, single_color, hit)) {
                             did_hit = true;
                             if (hit.mat.i == 1) {
@@ -192,6 +198,35 @@
             }
 
             void main() {
+                float yaw = u_cursor[0];
+                float pitch = - u_cursor[1];
+                mat4 r_yaw = mat4(cos(yaw), -sin(yaw), 0, 1.,
+                                sin(yaw), cos(yaw), 0, 1.,
+                                0, 0, 1., 0.,
+                                0, 0, 0, 1.);
+                mat4 r_pitch = mat4(1., 0, 0, 0,
+                                    0, cos(pitch), -sin(pitch), 0,
+                                    0, sin(pitch), cos(pitch), 0,
+                                    0, 0, 0, 1.);
+                mat4 rot = r_pitch*r_yaw;
+                cam.gaze = vec3(rot * vec4(cam.gaze, 1.0));
+                cam.o = vec3(rot * vec4(cam.o, 1.0));
+                cam.up = vec3(rot * vec4(cam.up, 1.0));
+
+                vec3 gu = normalize(cross(cam.gaze, cam.up));
+                mat4 rotate = mat4(transpose(mat3(gu, cam.up, -cam.gaze)));
+                mat4 tran = mat4(1., 0., 0., 0.,
+                                0., 1., 0., 0.,
+                                0., 0., 1., 0.,
+                                -cam.o.x, -cam.o.y, -cam.o.z, 0.);
+
+                mat4 view = rotate * tran;
+
+                for (int i = 0; i < 10; i++) {
+                    spheres[i] = u_spheres[i];
+                    spheres[i].o = vec3(view * vec4(spheres[i].o, 1.));
+                }
+
                 Ray ray;
                 ray.o = vec3(0);
                 ray.d = pixel - ray.o;
@@ -199,7 +234,7 @@
                 float t = 0.5 * (normalize(ray.d).y + 1.0);
                 bg_color = (1.0 - t) * vec4(1.0) + t * bg_color;
                 shoot_rays(ray, color);
-                gl_FragColor = out_color(color, sample_count);
+                gl_FragColor = out_color(color, u_sample_count);
             }
 
 		</script>

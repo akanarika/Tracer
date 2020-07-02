@@ -62,12 +62,13 @@
 
             varying vec3 pixel;
             vec4 bg_color = vec4(0.4, 0.4, 0.0, 1.0);
-            //const int sample_count = 10;
             const float pi = 3.141592653589;
             float n_seed = u_seed;
 
             Sphere spheres[10];
-            Cam cam = Cam(vec3(0., 0., 5000.), vec3(0, 0, -1.0), vec3(0, 1.0, 0), 10.);
+            Cam cam = Cam(vec3(0., 0., 6000.), vec3(0, 0, -1.0), vec3(0, 1.0, 0), 10.);
+
+            vec3 light = vec3(500., -500., 500.);
 
             // Unitilities 
             // 0 ~ 1.0
@@ -146,7 +147,7 @@
 
             bool shoot_ray(in Ray ray, inout vec4 color, out Hit hit) {
                 if (!intersect(ray, hit)) return false;                
-                color = vec4(0.5 * vec3(hit.n.x + 1.0, hit.n.y + 1.0, hit.n.z + 1.0), 1.0);
+                color = vec4(0.5 * vec3(hit.n.x + 1.0, hit.n.y + 1.0, hit.n.z + 1.0) * dot(hit.n, normalize(light - hit.p)), 1.0);
                 return true;
             }
 

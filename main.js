@@ -143,9 +143,9 @@ function main() {
         gl.uniformMatrix4fv(ml, false, mat);
 
         // cam
-        gl.uniform3f(gl.getUniformLocation(prog, "u_cam.o"), cam.o[0], cam.o[1], cam.o[2]);
-        gl.uniform3f(gl.getUniformLocation(prog, "u_cam.gaze"), 0, -1.0, -1.0);
-        gl.uniform3f(gl.getUniformLocation(prog, "u_cam.up"), 0, 1.0, -1.0);
+        // gl.uniform3f(gl.getUniformLocation(prog, "u_cam.o"), cam.o[0], cam.o[1], cam.o[2]);
+        // gl.uniform3f(gl.getUniformLocation(prog, "u_cam.gaze"), 0, -1.0, -1.0);
+        // gl.uniform3f(gl.getUniformLocation(prog, "u_cam.up"), 0, 1.0, -1.0);
 
         // view
         // var gu = vec3.normalize(vec3.cross(cam.gaze, cam.up));

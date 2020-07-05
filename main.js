@@ -25,24 +25,6 @@ function createProgram(gl, vs, fs) {
     gl.deleteProgram(prog);
 }
 
-class Camera {
-  constructor(o, g, u) {
-    this.o = o;
-    if (g == undefined) {
-        this.gaze = vec3.normalize([0, 0, -1.0]);
-    } else {
-        this.gaze = vec3.normalize(g);
-    }
-    if (u == undefined) {
-        this.up = vec3.normalize([0, 1.0, 0]);
-    } else {
-        this.up = vec3.normalize(u);
-    }
-  }
-}
-
-var cursor = [0, 0, 0];
-
 function initShaders(gl) {
     // get shaders
     var vss = document.querySelector("#vs").text;
@@ -53,7 +35,6 @@ function initShaders(gl) {
     return prog;
 }
 
-// cam
 function generateSpheres(c, static) {
     if (static == 1) {
         return [[0, 400, 0, 400, 2, .4,.5,.6], [0, -10000, 0, 10000, 1, .2, .2, .8]];
@@ -70,10 +51,25 @@ function generateSpheres(c, static) {
     }
     return res;
 }
-var cam = new Camera([0, 3000, 3000], [0, -0, -1.0], [0, 1.0, 0]);
-var spheres = generateSpheres(10, 0);
-var hasGround = 1;
 
+function generateCubes(c, static) {
+    var res = [];
+    for (var i = 0; i < c; i++) {
+        var x = 4 * (Math.random() * w - w / 2);
+        var y = 4 * (Math.random() * h - h / 2);
+        var z = - Math.random() * h / 20.0 - 20.0;
+        var l = 3 * Math.random() * h + 200.0;
+        res.push([x, y, z, l,
+            Math.floor(Math.random() * 2), 
+            .2 + .8 * Math.random(), .2 + .8 * Math.random(), .2 + .8 * Math.random()]);
+    }
+    return res;
+}
+
+var spheres = generateSpheres(5, 0);
+var cubes = generateCubes(2, 0);
+var cursor = [0, 0, 0];
+var hasGround = 1;
 
 function drawScene(sample, gl, prog) {
     // w, h
@@ -95,6 +91,12 @@ function drawScene(sample, gl, prog) {
     // sample count
     gl.uniform1i(gl.getUniformLocation(prog, "u_sample_count"), sample);
 
+    // sphere count
+    gl.uniform1i(gl.getUniformLocation(prog, "u_sphere_count"), spheres.length);
+
+    // triangle count
+    gl.uniform1i(gl.getUniformLocation(prog, "u_triangle_count"), (cubes.length * 12));
+
     // proj
     var mat = m3.init();
     mat = m3.tom4(m3.multiply(mat, m3.proj(w, h)));
@@ -106,6 +108,12 @@ function drawScene(sample, gl, prog) {
         gl.uniform1f(gl.getUniformLocation(prog, "u_spheres[" + i + "].r"), spheres[i][3]);
         gl.uniform1i(gl.getUniformLocation(prog, "u_spheres[" + i + "].mat.i"), spheres[i][4]);
         gl.uniform3f(gl.getUniformLocation(prog, "u_spheres[" + i + "].mat.att"), spheres[i][5], spheres[i][6], spheres[i][7]);
+    }
+
+    for (var i = 0; i < cubes.length; i++) {
+        gl.uniform4f(gl.getUniformLocation(prog, "u_cubes[" + i + "].p"), cubes[i][0], cubes[i][1], cubes[i][2], cubes[i][3]);
+        gl.uniform1i(gl.getUniformLocation(prog, "u_cubes[" + i + "].mat.i"), 1);//cubes[i][4]);
+        gl.uniform3f(gl.getUniformLocation(prog, "u_cubes[" + i + "].mat.att"), cubes[i][5], cubes[i][6], cubes[i][7]);
     }
 
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -155,9 +163,9 @@ function main() {
     var mouseUp = function(e){
         drag = false;
         drawScene(100, gl, prog);
-    };
-
-     var mouseMove = function(e) {
+    }; 
+   
+    var mouseMove = function(e) {
         if (!drag) return false;
         dX = (e.pageX-old_x) * Math.PI/canvas.width * .5,
         dY = (e.pageY-old_y) * Math.PI/canvas.height * .5;
@@ -166,26 +174,29 @@ function main() {
         drawScene(5, gl, prog);
         old_x = e.pageX, old_y = e.pageY;
         e.preventDefault();
-     };
+    };
 
     canvas.addEventListener("mousedown", mouseDown, false);
     canvas.addEventListener("mouseup", mouseUp, false);
     canvas.addEventListener("mouseout", mouseUp, false);
     canvas.addEventListener("mousemove", mouseMove, false);
 
+    // panel
     var param = function() {
       this.ground = true;
-      this.spheres = function() { spheres = generateSpheres(10, 0); drawScene(10, gl, prog); };
+      this.spheres = function() { spheres = generateSpheres(spheres.length, 0); drawScene(100, gl, prog); };
     };
     var params = new param();
 
     function initPanel() {
         var gui = new dat.GUI();
-        gui.add(params, 'ground').onChange(function(){hasGround = !hasGround; drawScene(100, gl, prog);});
+        gui.add(params, 'ground').onChange(function(){ hasGround = !hasGround; drawScene(100, gl, prog);});
         gui.add(params, 'spheres');
     };
 
+    //initPanel();
+
     drawScene(100, gl, prog);
-    initPanel();
 }
+
 main();

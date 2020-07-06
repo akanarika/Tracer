@@ -40,6 +40,19 @@ function generateSpheres(c, static) {
         return [[0, 400, 0, 400, 2, .4,.5,.6], [0, -10000, 0, 10000, 1, .2, .2, .8]];
     }
     var res = [];
+    if (static == 2) {
+        for (var i = 0; i < c; i++) {
+            var x = 5 * (Math.random() * w - w / 2);
+            var z = - 5 * (Math.random() * h - h / 2);
+            var r = 10 * Math.random() * h / c + 100.0;
+            var y = -2000. + r;
+            res.push([x, y, z, 
+                r,
+                Math.floor(Math.random() * 2), 
+                .2 + .8 * Math.random(), .2 + .8 * Math.random(), .2 + .8 * Math.random()]);
+        }
+        return res;
+    }
     for (var i = 0; i < c; i++) {
         var x = 5 * (Math.random() * w - w / 2);
         var y = 5 * (Math.random() * h - h / 2);
@@ -54,6 +67,18 @@ function generateSpheres(c, static) {
 
 function generateCubes(c, static) {
     var res = [];
+    if (static == 2) {
+        for (var i = 0; i < c; i++) {
+            var x = 4 * (Math.random() * w - w / 2);
+            var z = - 5 * (Math.random() * h - h / 2);
+            var l = Math.random() * h + 200.0;
+            var y = -2000. + l / 2.;
+            res.push([x, y, z, l,
+                Math.floor(Math.random() * 2), 
+                .2 + .8 * Math.random(), .2 + .8 * Math.random(), .2 + .8 * Math.random()]);
+        }
+        return res;
+    }
     for (var i = 0; i < c; i++) {
         var x = 4 * (Math.random() * w - w / 2);
         var y = 4 * (Math.random() * h - h / 2);
@@ -66,7 +91,7 @@ function generateCubes(c, static) {
     return res;
 }
 
-var spheres = generateSpheres(5, 0);
+var spheres = generateSpheres(6, 0);
 var cubes = generateCubes(2, 0);
 var cursor = [0, 0, 0];
 var hasGround = 1;
@@ -84,7 +109,7 @@ function drawScene(sample, gl, prog) {
     var ucl = gl.getUniformLocation(prog, "u_cursor");
     gl.uniform3f(ucl, cursor[0], cursor[1], cursor[2]);
 
-    // u_cursor
+    // u_ground
     var ugl = gl.getUniformLocation(prog, "u_ground");
     gl.uniform1i(ugl, hasGround);
 
@@ -112,7 +137,7 @@ function drawScene(sample, gl, prog) {
 
     for (var i = 0; i < cubes.length; i++) {
         gl.uniform4f(gl.getUniformLocation(prog, "u_cubes[" + i + "].p"), cubes[i][0], cubes[i][1], cubes[i][2], cubes[i][3]);
-        gl.uniform1i(gl.getUniformLocation(prog, "u_cubes[" + i + "].mat.i"), 1);//cubes[i][4]);
+        gl.uniform1i(gl.getUniformLocation(prog, "u_cubes[" + i + "].mat.i"), cubes[i][4]);
         gl.uniform3f(gl.getUniformLocation(prog, "u_cubes[" + i + "].mat.att"), cubes[i][5], cubes[i][6], cubes[i][7]);
     }
 

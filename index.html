@@ -21,11 +21,16 @@
             }
         </script>
 		<script id="fs" type="notjs">
+            #define LAMBERT 0
+            #define METAL 1
+            #define DIELECTRIC 2
+
             precision mediump float;
 
             struct Mat {
                 int i; // diffuse - 0, metal - 1
                 vec3 att; // attenuation
+                float eoe;
             };
 
             struct Sphere {
@@ -73,6 +78,7 @@
                 vec3 p;
                 vec3 n;
                 Mat mat;
+                bool outside;
             };
 
             uniform float w;
@@ -249,6 +255,26 @@
                     hit.t = t;
                     hit.p = ray.o + ray.d * t;
                     hit.n = normalize(hit.p - sphere.o);
+                    if (dot(ray.d, hit.n) < 0.) {
+                        hit.outside = true;
+                    } else {
+                        hit.outside = false;
+                        hit.n = -hit.n;
+                    }
+                    hit.mat = sphere.mat;
+                    return true;
+                }
+                t = (- half_b + sqrt(qua_delta)) / a;
+                if ((t > ray.t_min) && (t < ray.t_max)) {
+                    hit.t = t;
+                    hit.p = ray.o + ray.d * t;
+                    hit.n = normalize(hit.p - sphere.o);
+                    if (dot(ray.d, hit.n) < 0.) {
+                        hit.outside = true;
+                    } else {
+                        hit.outside = false;
+                        hit.n = -hit.n;
+                    }
                     hit.mat = sphere.mat;
                     return true;
                 }
@@ -256,13 +282,14 @@
             }
 
             bool intersectPlane(inout Ray ray, Plane plane, out Hit hit) {
+                return false;
                 if (!u_ground) return false;
                 float t = (dot(plane.n, plane.p) - dot(plane.n, ray.o)) / dot(plane.n, ray.d);
                 if (dot(plane.n, ray.d) > 0.) return false;
                 if (t > ray.t_min && t < ray.t_max) {
                     hit.t = t;
                     hit.p = ray.o + ray.d * t;
-                    hit.n = plane.n;
+                    hit.n = normalize(plane.n);
                     hit.mat = plane.mat;
                     hit.mat.att = hit.n;
                     return true;
@@ -285,13 +312,13 @@
                 vec3 n = normalize(cross(p1 - p0, p2 - p0));
                 if (dot(ray.d, n) > 0.) return false;
                 hit.t = t;
-                hit.n = n;
+                hit.n = normalize(n);
                 hit.p = ray.o + ray.d * t;
                 hit.mat = tri.mat;
                 return true;
             }
 
-            bool intersect(in Ray ray, inout Hit hit) {
+            bool intersect(in Ray ray, out Hit hit) {
                 bool did_hit = false;
                 for (int i = 0; i < 26; i++) {
                     if (intersectTriangle(ray, triangles[i], hit)) {
@@ -313,6 +340,23 @@
                 return true;
             }
 
+            vec3 refractin(vec3 uv, vec3 n, float eoe) {
+                float cos_theta = dot(-uv, n);
+                vec3 r_out_perp = eoe * (uv + cos_theta * n);
+                vec3 r_out_para = -sqrt(abs(1.0 - dot(r_out_perp, r_out_perp))) * n;
+                return r_out_para + r_out_perp;
+            }
+            
+            vec3 reflectin(vec3 v, vec3 n) {
+                return v - 2. * dot(v, n) * n;
+            }
+
+            float schlick(float cosine, float ref_idx) {
+                float r0 = (1. - ref_idx) / (1. + ref_idx);
+                r0 = r0 * r0;
+                return r0 + (1. - r0) * pow((1. - cosine), 5.);
+            }
+
             bool shoot_rays(in Ray ray, inout vec4 color) {
                 bool did_hit = false;
                 for (int i = 0; i < 100; i++) {
@@ -323,21 +367,36 @@
                     for (int d = 0; d < 8; d++) {
                         if (shoot_ray(nr, hit)) {
                             did_hit = true;
-                            col = col * hit.mat.att;
                             vec3 scatter;
-                            if (hit.mat.i == 0) {
+                            if (hit.mat.i == LAMBERT) {
                                 scatter = normalize(hit.n + random_unit_vector());
                             } else if (hit.mat.i == 1) {
-                                vec3 reflect = normalize(nr.d - 2.0 * dot(nr.d, hit.n) * hit.n);
-                                scatter = reflect + .01 * random_point_in_sphere();
+                                scatter = normalize(reflectin(normalize(nr.d), hit.n)); //reflect + .01 * random_point_in_sphere();
+                            } else if (hit.mat.i == 2) {
+                                hit.mat.att = vec3(.95);
+                                float eoe = hit.outside ? (1. / 1.3) : 1.3;
+                                vec3 uv = normalize(nr.d);
+                                float cos_theta = min(dot(-uv, hit.n), 1.);
+                                float sin_theta = sqrt(1. - cos_theta * cos_theta);
+                                if (eoe * sin_theta > 1.) {
+                                    scatter = normalize(reflectin(uv, hit.n));
+                                } else {
+                                    float reflect_probability = schlick(cos_theta, eoe);
+                                    if (random(n_seed) < reflect_probability) {
+                                        scatter = normalize(reflectin(uv, hit.n));
+                                    } else {
+                                        scatter = normalize(refractin(uv, hit.n, eoe));
+                                    }
+                                }
                             }
+                            col = col * hit.mat.att;
                             nr.d = scatter;
-                            nr.o = hit.p;
+                            nr.o = hit.p + 0.01 * nr.d;
                         } else {
                             break;
                         }
                     }
-                    color = color + vec4(col, 0.);
+                    color = color + vec4(col, 1.);
                 }
                 return did_hit;
             }
@@ -423,14 +482,17 @@
                     }
                 }
 
-                vec3 a = vec3(-3000., bottom - 2., 2000.);
-                vec3 b = vec3(3000., bottom - 2., 2000.);
-                vec3 c = vec3(3000., bottom - 2., -3000.);
-                vec3 d = vec3(-3000., bottom - 2., -3000.);
-                triangles[24].p = mat3(a, b, d);
-                triangles[25].p = mat3(b, c, d);
-                triangles[24].mat = Mat(0, vec3(.2, .5, .6));
-                triangles[25].mat = Mat(0, vec3(.2, .5, .6));
+                vec3 a = vec3(-30000., bottom - 2., 20000.);
+                vec3 b = vec3(30000., bottom - 2., 20000.);
+                vec3 c = vec3(30000., bottom - 2., -30000.);
+                vec3 d = vec3(-30000., bottom - 2., -30000.);
+
+                if (u_ground) {
+                    triangles[24].p = mat3(a, b, d);
+                    triangles[25].p = mat3(b, c, d);
+                    triangles[24].mat = Mat(0, vec3(.2, .5, .6), 1.3);
+                    triangles[25].mat = Mat(0, vec3(.2, .5, .6), 1.3);
+                }
 
                 light = Light(vec3(2., 10., 10.));
 

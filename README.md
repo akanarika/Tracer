@@ -4,6 +4,13 @@
 
 ---
 
+some results:
+
+<img src="./bugs/result1.png" width="250" height="200">
+<img src="./bugs/result2.png" width="250" height="200">
+<img src="./bugs/result3.png" width="250" height="200">
+<img src="./bugs/result4.png" width="250" height="200">
+
 some bugs or not:
 
 <img src="./bugs/1.png" width="250" height="200">

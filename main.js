@@ -53,14 +53,26 @@ function generateSpheres(c, static) {
         }
         return res;
     }
+    if (static == 3) {
+        for (var i = 0; i < c; i++) {
+        var x = 8 * (Math.random() * w - w / 2);
+        var y = 500. +  Math.random() * h;
+        var z = - 20 * Math.random() * h + 20.;
+            res.push([x, y, z, 
+                y,
+                Math.floor(Math.random() * 2.5), 
+                .2 + .8 * Math.random(), .2 + .8 * Math.random(), .2 + .8 * Math.random()]);
+        }
+        return res;
+    }
     for (var i = 0; i < c; i++) {
         var x = 5 * (Math.random() * w - w / 2);
         var y = 5 * (Math.random() * h - h / 2);
         var z = - Math.random() * h / 20.0 - 20.0;
         res.push([x, y, z, 
             2 * Math.random() * h + 100.0, 
-            Math.floor(Math.random() * 2), 
-            .2 + .8 * Math.random(), .2 + .8 * Math.random(), .2 + .8 * Math.random()]);
+            Math.floor(Math.random() * 2.5), 
+            .6 + .4 * Math.random(), .4 + .6 * Math.random(), .4 + .6 * Math.random()]);
     }
     return res;
 }
@@ -74,8 +86,8 @@ function generateCubes(c, static) {
             var l = Math.random() * h + 200.0;
             var y = -2000. + l / 2.;
             res.push([x, y, z, l,
-                Math.floor(Math.random() * 2), 
-                .2 + .8 * Math.random(), .2 + .8 * Math.random(), .2 + .8 * Math.random()]);
+                Math.floor(Math.random() * 3), 
+                .5 + .5 * Math.random(), .5 + .5 * Math.random(), .5 + .5 * Math.random()]);
         }
         return res;
     }
@@ -86,13 +98,13 @@ function generateCubes(c, static) {
         var l = 3 * Math.random() * h + 200.0;
         res.push([x, y, z, l,
             Math.floor(Math.random() * 2), 
-            .2 + .8 * Math.random(), .2 + .8 * Math.random(), .2 + .8 * Math.random()]);
+            .5 + .5 * Math.random(), .5 + .5 * Math.random(), .5 + .5 * Math.random()]);
     }
     return res;
 }
 
-var spheres = generateSpheres(6, 0);
-var cubes = generateCubes(2, 0);
+var spheres = generateSpheres(8, 3);
+var cubes = generateCubes(0, 0);
 var cursor = [0, 0, 0];
 var hasGround = 1;
 
@@ -133,12 +145,14 @@ function drawScene(sample, gl, prog) {
         gl.uniform1f(gl.getUniformLocation(prog, "u_spheres[" + i + "].r"), spheres[i][3]);
         gl.uniform1i(gl.getUniformLocation(prog, "u_spheres[" + i + "].mat.i"), spheres[i][4]);
         gl.uniform3f(gl.getUniformLocation(prog, "u_spheres[" + i + "].mat.att"), spheres[i][5], spheres[i][6], spheres[i][7]);
+        gl.uniform1f(gl.getUniformLocation(prog, "u_spheres[" + i + "].mat.eoe"), 2.4);
     }
 
     for (var i = 0; i < cubes.length; i++) {
         gl.uniform4f(gl.getUniformLocation(prog, "u_cubes[" + i + "].p"), cubes[i][0], cubes[i][1], cubes[i][2], cubes[i][3]);
         gl.uniform1i(gl.getUniformLocation(prog, "u_cubes[" + i + "].mat.i"), cubes[i][4]);
         gl.uniform3f(gl.getUniformLocation(prog, "u_cubes[" + i + "].mat.att"), cubes[i][5], cubes[i][6], cubes[i][7]);
+        gl.uniform1f(gl.getUniformLocation(prog, "u_cubes[" + i + "].mat.eoe"), 1.);
     }
 
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -181,7 +195,6 @@ function main() {
         drag = true;
         old_x = e.pageX, old_y = e.pageY;
         e.preventDefault();
-        
         return false;
     };
 
@@ -209,17 +222,18 @@ function main() {
     // panel
     var param = function() {
       this.ground = true;
-      this.spheres = function() { spheres = generateSpheres(spheres.length, 0); drawScene(100, gl, prog); };
+      this.generate = function() { spheres = generateSpheres(8, 3); drawScene(100, gl, prog); };
     };
     var params = new param();
 
     function initPanel() {
         var gui = new dat.GUI();
         gui.add(params, 'ground').onChange(function(){ hasGround = !hasGround; drawScene(100, gl, prog);});
-        gui.add(params, 'spheres');
+        
+        gui.add(params, 'generate');
     };
 
-    //initPanel();
+    initPanel();
 
     drawScene(100, gl, prog);
 }
